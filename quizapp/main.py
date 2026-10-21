@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 from starlette.middleware.sessions import SessionMiddleware
@@ -60,6 +60,16 @@ app.add_middleware(
 (PUBLIC_DIR / "js").mkdir(parents=True, exist_ok=True)
 app.mount("/css", StaticFiles(directory=str(PUBLIC_DIR / "css")), name="css")
 app.mount("/js", StaticFiles(directory=str(PUBLIC_DIR / "js")), name="js")
+
+
+@app.get("/favicon.svg", include_in_schema=False)
+def favicon_svg():
+    return FileResponse(PUBLIC_DIR / "favicon.svg", media_type="image/svg+xml")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon_ico():
+    return RedirectResponse("/favicon.svg", status_code=307)
 
 
 @app.get("/health")
