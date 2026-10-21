@@ -2,6 +2,8 @@
 
 A private quiz-hosting platform for hosts and their participants. Hosts build multiple-choice and written quizzes, share an access code, and grade written answers when the timer is over. Multiple-choice questions score themselves; results stay sealed until the host releases them.
 
+**Live:** <https://quiz-systems.vercel.app>
+
 **Stack:** FastAPI · Jinja2 · SQLAlchemy · SQLite locally · Supabase Postgres in production · Vercel
 
 ---
@@ -48,6 +50,8 @@ python -m uvicorn quizapp.main:app --reload
 Open <http://127.0.0.1:8000>. On first start the app creates the SQLite schema (`dev.db`), bootstraps the admin account, and seeds demo content when `SEED_DEMO=1`.
 
 ### Demo accounts
+
+These accounts are created only when `SEED_DEMO=1`, which is the default for a fresh local setup. The production deployment uses `SEED_DEMO=0`.
 
 | Role | Email | Password |
 | --- | --- | --- |
