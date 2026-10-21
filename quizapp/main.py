@@ -54,17 +54,21 @@ app.add_middleware(
     https_only=settings.cookie_secure,
 )
 
-# Vercel serves public/ from its CDN. Locally we mount the same folders so
-# development matches production paths (/css/..., /js/...).
-(PUBLIC_DIR / "css").mkdir(parents=True, exist_ok=True)
-(PUBLIC_DIR / "js").mkdir(parents=True, exist_ok=True)
-app.mount("/css", StaticFiles(directory=str(PUBLIC_DIR / "css")), name="css")
-app.mount("/js", StaticFiles(directory=str(PUBLIC_DIR / "js")), name="js")
+# Vercel serves public/ from its CDN and does not include it in the function
+# bundle. Locally we mount the same folders so development matches production
+# paths (/css/..., /js/...).
+if (PUBLIC_DIR / "css").is_dir():
+    app.mount("/css", StaticFiles(directory=str(PUBLIC_DIR / "css")), name="css")
+if (PUBLIC_DIR / "js").is_dir():
+    app.mount("/js", StaticFiles(directory=str(PUBLIC_DIR / "js")), name="js")
 
 
 @app.get("/favicon.svg", include_in_schema=False)
 def favicon_svg():
-    return FileResponse(PUBLIC_DIR / "favicon.svg", media_type="image/svg+xml")
+    icon = PUBLIC_DIR / "favicon.svg"
+    if not icon.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(icon, media_type="image/svg+xml")
 
 
 @app.get("/favicon.ico", include_in_schema=False)
