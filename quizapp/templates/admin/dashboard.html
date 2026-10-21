@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import user_status, role_label, empty_state with context %}
+{% block title %}Admin overview · {{ app_name }}{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <span class="eyebrow">Platform admin</span>
+    <h1>Approvals and account health</h1>
+    <p class="muted">Hosts are approved here. Participants are normally approved by a host, with admin as a fallback.</p>
+  </div>
+  <a class="btn btn-primary" href="/admin/users">Manage people</a>
+</header>
+
+<section class="stat-grid">
+  <div class="stat"><span class="stat-label">Approved hosts</span><span class="stat-value">{{ counts.hosts }}</span></div>
+  <div class="stat"><span class="stat-label">Approved participants</span><span class="stat-value">{{ counts.participants }}</span></div>
+  <div class="stat"><span class="stat-label">Quizzes created</span><span class="stat-value">{{ counts.quizzes }}</span></div>
+  <div class="stat"><span class="stat-label">Pending approvals</span><span class="stat-value {{ 'text-amber' if counts.pending }}">{{ counts.pending }}</span></div>
+</section>
+
+{% if pending_hosts %}
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Host applications</h2>
+        <span class="muted small">{{ pending_hosts | length }} waiting · these accounts cannot sign in yet</span>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Name</th><th>Email</th><th>Requested</th><th class="right">Decision</th></tr></thead>
+        <tbody>
+          {% for person in pending_hosts %}
+            <tr>
+              <td><div class="person"><span class="avatar small">{{ person.name[:1] | upper }}</span><b>{{ person.name }}</b></div></td>
+              <td class="muted">{{ person.email }}</td>
+              <td class="muted small">{{ person.created_at | dt }}</td>
+              <td class="right">
+                <div class="row gap-2 end">
+                  <form method="post" action="/admin/users/{{ person.id }}/reject">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                    <button class="btn btn-ghost btn-sm" type="submit">Reject</button>
+                  </form>
+                  <form method="post" action="/admin/users/{{ person.id }}/approve">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                    <button class="btn btn-primary btn-sm" type="submit">Approve host</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endif %}
+
+<div class="layout-2col">
+  <div class="stack gap-4">
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>Participant requests</h2>
+          <span class="muted small">{{ pending_participants | length }} pending · hosts usually handle these</span>
+        </div>
+        <a class="muted small" href="/host/participants">Host view</a>
+      </div>
+      {% if pending_participants %}
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>Name</th><th>Email</th><th>Requested</th><th class="right">Decision</th></tr></thead>
+            <tbody>
+              {% for person in pending_participants %}
+                <tr>
+                  <td><div class="person"><span class="avatar small">{{ person.name[:1] | upper }}</span><b>{{ person.name }}</b></div></td>
+                  <td class="muted">{{ person.email }}</td>
+                  <td class="muted small">{{ person.created_at | ago }}</td>
+                  <td class="right">
+                    <div class="row gap-2 end">
+                      <form method="post" action="/admin/users/{{ person.id }}/reject">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-ghost btn-sm" type="submit">Reject</button>
+                      </form>
+                      <form method="post" action="/admin/users/{{ person.id }}/approve">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-primary btn-sm" type="submit">Approve</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="card-pad">
+          {{ empty_state("No participant requests", "When a host is unavailable, you can approve participants here.") }}
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div><h2>Recent signups</h2><span class="muted small">Newest first</span></div>
+        <a class="muted small" href="/admin/users">All people</a>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Joined</th></tr></thead>
+          <tbody>
+            {% for person in recent %}
+              <tr>
+                <td>
+                  <div class="person">
+                    <span class="avatar small">{{ person.name[:1] | upper }}</span>
+                    <span><b>{{ person.name }}</b><span class="muted tiny">{{ person.email }}</span></span>
+                  </div>
+                </td>
+                <td>{{ role_label(person.role) }}</td>
+                <td>{{ user_status(person.status) }}</td>
+                <td class="muted small">{{ person.created_at | ago }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <aside class="stack gap-4">
+    <section class="card card-pad">
+      <span class="eyebrow">Audit trail</span>
+      <h2 class="h3">Recent actions</h2>
+      {% if audit %}
+        <div class="timeline">
+          {% for entry in audit %}
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <div>
+                <b class="mono tiny">{{ entry.action }}</b>
+                <p class="small">{{ entry.detail }}</p>
+                <span class="muted tiny">{{ entry.created_at | dt }}</span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted small">No audit entries yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="card card-pad">
+      <span class="eyebrow">Approval rules</span>
+      <h2 class="h3">Who approves whom</h2>
+      <ul class="check-list small">
+        <li><b>Hosts</b> — approved by the platform admin</li>
+        <li><b>Participants</b> — approved by any host, or admin fallback</li>
+        <li><b>Access</b> — every quiz still requires its own code</li>
+        <li><b>Accounts</b> — pending, rejected and disabled users cannot sign in</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

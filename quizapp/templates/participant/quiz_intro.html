@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import quiz_status, attempt_status with context %}
+{% block title %}{{ quiz.title }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/dashboard">Dashboard</a>
+  <span>/</span>
+  <span>{{ quiz.title }}</span>
+</nav>
+
+<header class="page-head">
+  <div>
+    <div class="row gap-2 wrap center-y">
+      <span class="eyebrow">Hosted by {{ quiz.host.name }}</span>
+      {{ quiz_status(quiz.status) }}
+    </div>
+    <h1>{{ quiz.title }}</h1>
+    <p class="muted lede">{{ quiz.description or 'No description provided.' }}</p>
+  </div>
+</header>
+
+<div class="layout-2col">
+  <div class="stack gap-4">
+    <section class="card card-pad">
+      <h2 class="h3">Before you start</h2>
+      {% if quiz.instructions %}
+        <div class="prose">{{ quiz.instructions }}</div>
+      {% else %}
+        <p class="muted">Your host didn't add extra instructions. Answer every question and submit before the timer ends.</p>
+      {% endif %}
+    </section>
+
+    <section class="card card-pad">
+      <h2 class="h3">Quiz at a glance</h2>
+      <div class="meta-grid">
+        <div><span class="meta-label">Questions</span><b>{{ quiz.questions | length }}</b></div>
+        <div><span class="meta-label">Total points</span><b>{{ quiz.total_points }}</b></div>
+        <div><span class="meta-label">Time limit</span><b>{{ quiz.time_limit_minutes ~ ' minutes' if quiz.time_limit_minutes else 'No limit' }}</b></div>
+        <div><span class="meta-label">Attempts allowed</span><b>{{ quiz.max_attempts }}</b></div>
+        <div><span class="meta-label">Pass mark</span><b>{{ quiz.pass_percent }}%</b></div>
+        <div><span class="meta-label">Closes</span><b>{{ quiz.closes_at | dt if quiz.closes_at else 'Open-ended' }}</b></div>
+      </div>
+    </section>
+
+    {% if attempts %}
+      <section class="card card-pad">
+        <h2 class="h3">Your attempts</h2>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>Attempt</th><th>Started</th><th>Status</th><th>Score</th><th></th></tr></thead>
+            <tbody>
+              {% for item in attempts %}
+                <tr>
+                  <td class="mono">#{{ item.id }}</td>
+                  <td class="muted">{{ item.started_at | dt }}</td>
+                  <td>{{ attempt_status(item.status) }}</td>
+                  <td>
+                    {% if quiz.results_released and item.status == 'graded' %}
+                      <b>{{ item.score }}/{{ item.max_score }}</b>
+                      <span class="muted small">({{ item.percentage }}%)</span>
+                    {% else %}
+                      <span class="muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="right"><a class="btn btn-ghost btn-sm" href="/attempt/{{ item.id }}/result">View</a></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {% endif %}
+  </div>
+
+  <aside class="stack gap-4">
+    <section class="card card-pad start-card">
+      {% if active %}
+        <span class="eyebrow">Attempt in progress</span>
+        <h2 class="h3">Pick up where you left off.</h2>
+        <p class="muted small">Your timer is still running. Saved answers are waiting for you.</p>
+        <a class="btn btn-primary btn-block" href="/attempt/{{ active.id }}">Continue attempt</a>
+      {% elif can_start %}
+        <span class="eyebrow">Ready when you are</span>
+        <h2 class="h3">Start attempt {{ used + 1 }} of {{ quiz.max_attempts }}</h2>
+        <p class="muted small">
+          The timer starts the moment you begin{% if quiz.time_limit_minutes %} and you'll have {{ quiz.time_limit_minutes }} minutes{% endif %}.
+          Answers autosave, and the attempt submits automatically when time runs out.
+        </p>
+        <form method="post" action="/quiz/{{ quiz.id }}/start">
+          <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+          <button class="btn btn-primary btn-block btn-lg" type="submit">Start the timer</button>
+        </form>
+      {% elif quiz.status == 'closed' %}
+        <span class="eyebrow">Closed</span>
+        <h2 class="h3">This quiz is no longer accepting attempts.</h2>
+        <p class="muted small">Your existing attempts remain available from the dashboard.</p>
+      {% elif quiz.opens_at and not quiz.is_open %}
+        <span class="eyebrow">Not open yet</span>
+        <h2 class="h3">Opens {{ quiz.opens_at | dt }}</h2>
+        <p class="muted small">Come back once the window opens. Your enrollment is already saved.</p>
+      {% elif remaining == 0 %}
+        <span class="eyebrow">Attempts used</span>
+        <h2 class="h3">You've used all {{ quiz.max_attempts }} attempt{{ '' if quiz.max_attempts == 1 else 's' }}.</h2>
+        <p class="muted small">Results appear here once your host releases them.</p>
+      {% else %}
+        <span class="eyebrow">Unavailable</span>
+        <h2 class="h3">This quiz isn't open right now.</h2>
+        <p class="muted small">Check with your host if you expected to take it.</p>
+      {% endif %}
+
+      {% if quiz.results_released %}
+        <div class="notice notice-success compact">
+          <b>Results are released.</b>
+          <span>Open any graded attempt to see your feedback.</span>
+        </div>
+      {% else %}
+        <div class="notice notice-info compact">
+          <b>Results are sealed.</b>
+          <span>Your host releases scores after grading is complete.</span>
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="card card-pad">
+      <span class="eyebrow">Integrity</span>
+      <h2 class="h3">A fair attempt</h2>
+      <ul class="check-list small">
+        <li>One timer, enforced on the server</li>
+        <li>Answers autosave every few seconds</li>
+        <li>Submitting locks your answers</li>
+        <li>Refreshing won't reset the clock</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

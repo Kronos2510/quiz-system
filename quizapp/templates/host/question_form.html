@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit question' if question else 'Add question' }} · {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/host">Host dashboard</a>
+  <span>/</span>
+  <a href="/host/quizzes/{{ quiz.id }}/edit">{{ quiz.title }}</a>
+  <span>/</span>
+  <span>{{ 'Edit question' if question else 'New question' }}</span>
+</nav>
+
+{% set existing = question.options if question else [] %}
+{% if posted %}
+  {% set texts = posted.getlist('option_text') %}
+  {% set prompt_value = posted.get('prompt', '') %}
+  {% set points_value = posted.get('points', '') %}
+  {% set explanation_value = posted.get('explanation', '') %}
+  {% set model_value = posted.get('model_answer', '') %}
+  {% set correct_value = posted.get('correct_option', '') %}
+{% else %}
+  {% set texts = existing | map(attribute='text') | list %}
+  {% set ns = namespace(correct='') %}
+  {% for option in existing %}
+    {% if option.is_correct %}{% set ns.correct = loop.index0 | string %}{% endif %}
+  {% endfor %}
+  {% set correct_value = ns.correct %}
+  {% set prompt_value = question.prompt if question else '' %}
+  {% set points_value = question.points if question else 1 %}
+  {% set explanation_value = question.explanation if question else '' %}
+  {% set model_value = question.model_answer if question else '' %}
+{% endif %}
+{% set row_count = (texts | length) if (texts | length) > 4 else 4 %}
+
+<header class="page-head">
+  <div>
+    <span class="eyebrow">{{ 'Edit question' if question else 'New question' }}</span>
+    <h1>{{ 'Refine this question' if question else 'Add a question' }}</h1>
+    <p class="muted">{{ quiz.title }} · {{ 'Multiple choice' if qtype == 'mcq' else 'Written answer' }}</p>
+  </div>
+</header>
+
+{% if errors %}
+  <div class="notice notice-error">
+    <b>Check these details:</b>
+    <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+
+<form method="post" action="{{ '/host/quizzes/' ~ quiz.id ~ '/questions/' ~ question.id ~ '/edit' if question else '/host/quizzes/' ~ quiz.id ~ '/questions/new' }}" class="layout-2col">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  <input type="hidden" name="type" value="{{ qtype }}">
+
+  <div class="stack gap-4">
+    <section class="card card-pad stack gap-4">
+      <div class="row between center-y">
+        <h2 class="h3">Question</h2>
+        <span class="pill {{ 'pill-cyan' if qtype == 'mcq' else 'pill-magenta' }}">{{ 'Multiple choice' if qtype == 'mcq' else 'Written answer' }}</span>
+      </div>
+
+      <label class="field">
+        <span class="label">Prompt</span>
+        <textarea class="textarea" name="prompt" rows="4" maxlength="5000" required placeholder="{{ 'e.g. Which civilization built the Colosseum in Rome?' if qtype == 'mcq' else 'e.g. Explain one long-term effect of the Silk Road on Eurasian societies.' }}">{{ prompt_value }}</textarea>
+        <span class="hint">Ask one clear question. Line breaks are preserved.</span>
+      </label>
+
+      <div class="form-grid">
+        <label class="field points-field">
+          <span class="label">Points</span>
+          <input class="input" type="number" name="points" min="1" max="100" value="{{ points_value }}" required>
+          <span class="hint">Used in the quiz total and pass percentage.</span>
+        </label>
+      </div>
+    </section>
+
+    {% if qtype == 'mcq' %}
+      <section class="card card-pad stack gap-4">
+        <div class="row between center-y">
+          <div>
+            <h2 class="h3">Answer options</h2>
+            <p class="muted small">Mark exactly one option as correct. Participants see the options in the order you set.</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" type="button" data-add-option>+ Add option</button>
+        </div>
+
+        <div class="option-edit-list" data-option-rows>
+          {% for i in range(row_count) %}
+            <div class="option-edit-row" data-option-row>
+              <label class="option-correct" title="Mark this option correct">
+                <input type="radio" name="correct_option" value="{{ i }}" {{ 'checked' if correct_value | string == i | string }} required>
+                <span class="radio-dot" aria-hidden="true"></span>
+                <span class="sr-only">Mark option {{ i + 1 }} correct</span>
+              </label>
+              <input class="input" type="text" name="option_text" maxlength="500" value="{{ texts[i] if i < (texts | length) else '' }}" placeholder="Option {{ i + 1 }}">
+              <button class="icon-btn danger" type="button" data-remove-option title="Remove option">×</button>
+            </div>
+          {% endfor %}
+        </div>
+        <p class="muted tiny">The leftmost circle marks the correct answer. Empty rows are ignored.</p>
+      </section>
+    {% else %}
+      <section class="card card-pad stack gap-4">
+        <div>
+          <h2 class="h3">Model answer</h2>
+          <p class="muted small">Only you (and graders) see this. Participants never see it before results are released.</p>
+        </div>
+        <label class="field">
+          <span class="label">What a strong answer includes</span>
+          <textarea class="textarea" name="model_answer" rows="6" maxlength="5000" placeholder="Summarise the expected ideas, facts or reasoning. Use it as a reference while grading.">{{ model_value }}</textarea>
+        </label>
+      </section>
+    {% endif %}
+
+    <section class="card card-pad stack gap-4">
+      <div>
+        <h2 class="h3">Explanation <span class="muted small">(optional)</span></h2>
+        <p class="muted small">Shown to participants after results are released. Good for teaching moments.</p>
+      </div>
+      <label class="field">
+        <span class="label">Why the answer is what it is</span>
+        <textarea class="textarea" name="explanation" rows="3" maxlength="5000" placeholder="e.g. The Colosseum was completed in 80 CE under the Flavian dynasty.">{{ explanation_value }}</textarea>
+      </label>
+    </section>
+
+    <div class="row gap-3 wrap">
+      <button class="btn btn-primary" type="submit">{{ 'Save changes' if question else 'Add question' }}</button>
+      <a class="btn btn-ghost" href="/host/quizzes/{{ quiz.id }}/edit">Cancel</a>
+    </div>
+  </div>
+
+  <aside class="stack gap-4">
+    <section class="card card-pad">
+      <span class="eyebrow">Grading</span>
+      <h2 class="h3">{{ 'Scored automatically' if qtype == 'mcq' else 'Scored by you' }}</h2>
+      <p class="muted small">
+        {% if qtype == 'mcq' %}
+          Multiple-choice answers are compared to the correct option the moment a participant submits.
+        {% else %}
+          Written answers enter your grading queue. You'll score each response against the model answer and can leave feedback.
+        {% endif %}
+      </p>
+    </section>
+
+    <section class="card card-pad">
+      <span class="eyebrow">Format</span>
+      <h2 class="h3">{{ 'Multiple choice' if qtype == 'mcq' else 'Written answer' }}</h2>
+      {% if question %}
+        <p class="muted small">To change the format, delete this question and add a new one.</p>
+      {% else %}
+        <p class="muted small">Need a different format?</p>
+        <a class="btn btn-ghost btn-block btn-sm" href="/host/quizzes/{{ quiz.id }}/questions/new?type={{ 'written' if qtype == 'mcq' else 'mcq' }}">Switch to {{ 'written answer' if qtype == 'mcq' else 'multiple choice' }}</a>
+      {% endif %}
+    </section>
+
+    <section class="card card-pad">
+      <span class="eyebrow">Locked later</span>
+      <h2 class="h3">Questions freeze</h2>
+      <p class="muted small">Once the first attempt starts, question edits lock. Get the wording right before you publish.</p>
+    </section>
+  </aside>
+</form>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Join a quiz · {{ app_name }}{% endblock %}
+{% block mainclass %}page page-narrow{% endblock %}
+
+{% block content %}
+<section class="card card-pad join-card">
+  <span class="eyebrow">Access code</span>
+  <h1>Join a quiz</h1>
+  <p class="muted lede">Your host shares a code like <b class="mono">QZ-AB3CD</b>. Enter it exactly — you only need it once.</p>
+
+  <form method="post" action="/join" class="stack gap-4">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <label class="field">
+      <span class="label">Quiz access code</span>
+      <input class="input code-input lg" type="text" name="code" value="{{ code }}" placeholder="QZ-AB3CD" autocomplete="off" spellcheck="false" required autofocus>
+      <span class="hint">Not sure where the code is? Ask the host who invited you.</span>
+    </label>
+    <button class="btn btn-primary btn-block btn-lg" type="submit">Redeem code</button>
+  </form>
+
+  <div class="notice notice-info">
+    <b>Codes are per quiz.</b>
+    <span>If your host rotates the code, the old one stops working. Your existing enrollment stays.</span>
+  </div>
+
+  <a class="back-link" href="/dashboard">← Back to dashboard</a>
+</section>
+{% endblock %}

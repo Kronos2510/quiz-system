@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import quiz_status, attempt_status, empty_state with context %}
+{% block title %}Dashboard · {{ app_name }}{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <span class="eyebrow">Participant dashboard</span>
+    <h1>Hey {{ user.name.split(' ')[0] }}. Ready for the next one?</h1>
+    <p class="muted">Your joined quizzes, attempts and released scores live here.</p>
+  </div>
+  <a class="btn btn-primary" href="/join">Join with a code</a>
+</header>
+
+<section class="stat-grid">
+  <div class="stat">
+    <span class="stat-label">Quizzes joined</span>
+    <span class="stat-value">{{ cards | length }}</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Attempts taken</span>
+    <span class="stat-value">{{ total_attempts }}</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Average score</span>
+    <span class="stat-value">{{ average ~ '%' if average is not none else '—' }}</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Awaiting release</span>
+    <span class="stat-value">{{ pending_release }}</span>
+  </div>
+</section>
+
+<div class="layout-2col">
+  <section class="stack gap-4">
+    <div class="section-head tight">
+      <h2>Your quizzes</h2>
+      <span class="muted small">{{ cards | length }} joined</span>
+    </div>
+
+    {% if cards %}
+      <div class="card-grid">
+        {% for card in cards %}
+          {% set quiz = card.quiz %}
+          <article class="quiz-card">
+            <div class="card-top">
+              <span class="eyebrow">{{ quiz.host.name }}</span>
+              {{ quiz_status(quiz.status) }}
+            </div>
+            <h3><a href="/quiz/{{ quiz.id }}">{{ quiz.title }}</a></h3>
+            <p class="muted clamp-2">{{ quiz.description or 'No description provided.' }}</p>
+
+            <div class="meta-row">
+              <span>{{ quiz.questions | length }} question{{ '' if quiz.questions | length == 1 else 's' }}</span>
+              <span>{{ quiz.total_points }} pts</span>
+              <span>{{ quiz.time_limit_minutes ~ ' min' if quiz.time_limit_minutes else 'Untimed' }}</span>
+              <span>{{ card.used }}/{{ quiz.max_attempts }} used</span>
+            </div>
+
+            <div class="card-foot">
+              <div class="stack gap-1">
+                {% if quiz.results_released and card.best is not none %}
+                  <span class="score-inline">{{ card.best }}%</span>
+                  <span class="muted tiny">best score</span>
+                {% elif card.active %}
+                  <span class="muted small">Attempt in progress</span>
+                {% elif card.remaining == 0 %}
+                  <span class="muted small">No attempts left</span>
+                {% else %}
+                  <span class="muted small">{{ card.remaining }} attempt{{ '' if card.remaining == 1 else 's' }} available</span>
+                {% endif %}
+              </div>
+
+              {% if card.active %}
+                <a class="btn btn-primary btn-sm" href="/attempt/{{ card.active.id }}">Continue</a>
+              {% elif quiz.is_open and card.remaining > 0 %}
+                <a class="btn btn-primary btn-sm" href="/quiz/{{ quiz.id }}">Open quiz</a>
+              {% elif card.attempts %}
+                <a class="btn btn-ghost btn-sm" href="/attempt/{{ card.attempts[0].id }}/result">View result</a>
+              {% else %}
+                <span class="pill pill-gray">Closed</span>
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card card-pad">
+        {{ empty_state("No quizzes yet", "Enter the access code your host shared to join your first quiz.") }}
+        <div class="center">
+          <a class="btn btn-primary" href="/join">Join a quiz</a>
+        </div>
+      </div>
+    {% endif %}
+  </section>
+
+  <aside class="stack gap-4">
+    <section class="card card-pad">
+      <span class="eyebrow">Quick join</span>
+      <h2 class="h3">Have a code?</h2>
+      <p class="muted small">Codes look like <b class="mono">QZ-AB3CD</b> and are shared by your host.</p>
+      <form method="post" action="/join" class="stack gap-3">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+        <input class="input code-input" type="text" name="code" placeholder="QZ-AB3CD" autocomplete="off" spellcheck="false" required>
+        <button class="btn btn-primary btn-block" type="submit">Join quiz</button>
+      </form>
+    </section>
+
+    <section class="card card-pad">
+      <span class="eyebrow">How results work</span>
+      <h2 class="h3">Sealed until release</h2>
+      <p class="muted small">
+        Multiple-choice answers are scored on submit, but your host releases results when grading is done.
+        Until then, attempts show as <b>awaiting grading</b>.
+      </p>
+      <ul class="check-list small">
+        <li>Autosave while you answer</li>
+        <li>Server-enforced deadline</li>
+        <li>Feedback visible after release</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

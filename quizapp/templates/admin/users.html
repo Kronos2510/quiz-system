@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import user_status, role_label, empty_state with context %}
+{% block title %}People · Admin · {{ app_name }}{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <span class="eyebrow">Platform admin</span>
+    <h1>People</h1>
+    <p class="muted">Approve accounts, disable access and reset passwords.</p>
+  </div>
+  <a class="btn btn-ghost" href="/admin">Back to overview</a>
+</header>
+
+<form method="get" action="/admin/users" class="card card-pad filter-bar">
+  <label class="field grow">
+    <span class="label">Search</span>
+    <input class="input" type="search" name="q" value="{{ q }}" placeholder="Name or email">
+  </label>
+  <label class="field">
+    <span class="label">Role</span>
+    <select class="select" name="role">
+      <option value="">All roles</option>
+      <option value="host" {{ 'selected' if role == 'host' }}>Host</option>
+      <option value="participant" {{ 'selected' if role == 'participant' }}>Participant</option>
+      <option value="admin" {{ 'selected' if role == 'admin' }}>Admin</option>
+    </select>
+  </label>
+  <label class="field">
+    <span class="label">Status</span>
+    <select class="select" name="status">
+      <option value="">All statuses</option>
+      <option value="pending" {{ 'selected' if status == 'pending' }}>Pending</option>
+      <option value="approved" {{ 'selected' if status == 'approved' }}>Approved</option>
+      <option value="rejected" {{ 'selected' if status == 'rejected' }}>Rejected</option>
+      <option value="disabled" {{ 'selected' if status == 'disabled' }}>Disabled</option>
+    </select>
+  </label>
+  <div class="row gap-2 end">
+    <a class="btn btn-ghost btn-sm" href="/admin/users">Reset</a>
+    <button class="btn btn-primary btn-sm" type="submit">Filter</button>
+  </div>
+</form>
+
+<section class="card">
+  <div class="card-head">
+    <div><h2>Accounts</h2><span class="muted small">{{ users | length }} shown</span></div>
+  </div>
+
+  {% if users %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Person</th><th>Role</th><th>Status</th><th>Joined</th><th class="right">Actions</th></tr></thead>
+        <tbody>
+          {% for person in users %}
+            <tr>
+              <td>
+                <div class="person">
+                  <span class="avatar small">{{ person.name[:1] | upper }}</span>
+                  <span>
+                    <b>{{ person.name }}{% if person.id == user.id %} <span class="muted tiny">(you)</span>{% endif %}</b>
+                    <span class="muted tiny">{{ person.email }}</span>
+                  </span>
+                </div>
+              </td>
+              <td>{{ role_label(person.role) }}</td>
+              <td>{{ user_status(person.status) }}</td>
+              <td class="muted small">{{ person.created_at | dt }}</td>
+              <td class="right">
+                {% if person.id == user.id or person.role == 'admin' %}
+                  <span class="muted small">—</span>
+                {% else %}
+                  <div class="row gap-2 end wrap">
+                    {% if person.status == 'pending' %}
+                      <form method="post" action="/admin/users/{{ person.id }}/reject">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-ghost btn-sm" type="submit">Reject</button>
+                      </form>
+                      <form method="post" action="/admin/users/{{ person.id }}/approve">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-primary btn-sm" type="submit">Approve</button>
+                      </form>
+                    {% elif person.status == 'approved' %}
+                      <form method="post" action="/admin/users/{{ person.id }}/disable" data-confirm="Disable this account? They will be signed out.">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-ghost btn-sm" type="submit">Disable</button>
+                      </form>
+                    {% elif person.status == 'disabled' %}
+                      <form method="post" action="/admin/users/{{ person.id }}/enable">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-primary btn-sm" type="submit">Enable</button>
+                      </form>
+                    {% elif person.status == 'rejected' %}
+                      <form method="post" action="/admin/users/{{ person.id }}/approve">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-ghost btn-sm" type="submit">Approve</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                  <details class="reset-details">
+                    <summary>Reset password</summary>
+                    <form method="post" action="/admin/users/{{ person.id }}/reset-password" class="reset-form">
+                      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                      <input class="input" type="password" name="password" minlength="8" placeholder="New password" required>
+                      <input class="input" type="password" name="confirm" minlength="8" placeholder="Confirm" required>
+                      <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                    </form>
+                  </details>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card-pad">
+      {{ empty_state("No accounts match", "Try clearing the filters or searching a different name.") }}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}New quiz · {{ app_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/host">Host dashboard</a>
+  <span>/</span>
+  <span>New quiz</span>
+</nav>
+
+<header class="page-head">
+  <div>
+    <span class="eyebrow">Step 1 of 2</span>
+    <h1>Create a draft quiz</h1>
+    <p class="muted">Set the frame now. Questions and the access code come next.</p>
+  </div>
+</header>
+
+{% if errors %}
+  <div class="notice notice-error">
+    <b>Almost there — fix these first:</b>
+    <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+
+<div class="layout-2col">
+  <form method="post" action="/host/quizzes/new" class="card card-pad stack gap-5">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+    <label class="field">
+      <span class="label">Quiz title</span>
+      <input class="input" type="text" name="title" value="{{ form.get('title', '') }}" maxlength="200" required placeholder="e.g. World History Foundations">
+    </label>
+
+    <label class="field">
+      <span class="label">Short description</span>
+      <textarea class="textarea" name="description" rows="3" maxlength="5000" placeholder="What is this quiz about? This appears on the participant's quiz card.">{{ form.get('description', '') }}</textarea>
+    </label>
+
+    <label class="field">
+      <span class="label">Instructions for participants</span>
+      <textarea class="textarea" name="instructions" rows="4" maxlength="5000" placeholder="Rules, what to bring, how grading works…">{{ form.get('instructions', '') }}</textarea>
+    </label>
+
+    <div class="divider"></div>
+
+    <div class="form-grid">
+      <label class="field">
+        <span class="label">Time limit (minutes)</span>
+        <input class="input" type="number" name="time_limit_minutes" min="1" max="600" value="{{ form.get('time_limit_minutes', '') }}" placeholder="Leave empty for untimed">
+        <span class="hint">Enforced on the server. Leave blank for no clock.</span>
+      </label>
+      <label class="field">
+        <span class="label">Attempts allowed</span>
+        <input class="input" type="number" name="max_attempts" min="1" max="10" value="{{ form.get('max_attempts', 1) }}" required>
+      </label>
+    </div>
+
+    <div class="form-grid">
+      <label class="field">
+        <span class="label">Pass mark (%)</span>
+        <input class="input" type="number" name="pass_percent" min="0" max="100" value="{{ form.get('pass_percent', 50) }}" required>
+      </label>
+      <div class="field">
+        <span class="label">Options</span>
+        <label class="check-row">
+          <input type="checkbox" name="shuffle_questions" {{ 'checked' if form.get('shuffle_questions') }}>
+          <span>Shuffle question order</span>
+        </label>
+        <label class="check-row">
+          <input type="checkbox" name="shuffle_options" {{ 'checked' if not form or form.get('shuffle_options') }}>
+          <span>Shuffle answer options</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <label class="field">
+        <span class="label">Opens at (UTC)</span>
+        <input class="input" type="datetime-local" name="opens_at" value="{{ form.get('opens_at', '') }}">
+        <span class="hint">Optional. Participants can't start before this.</span>
+      </label>
+      <label class="field">
+        <span class="label">Closes at (UTC)</span>
+        <input class="input" type="datetime-local" name="closes_at" value="{{ form.get('closes_at', '') }}">
+        <span class="hint">Optional. Attempts are capped at this time.</span>
+      </label>
+    </div>
+
+    <div class="row gap-3 wrap">
+      <button class="btn btn-primary" type="submit">Create draft</button>
+      <a class="btn btn-ghost" href="/host">Cancel</a>
+    </div>
+  </form>
+
+  <aside class="stack gap-4">
+    <section class="card card-pad">
+      <span class="eyebrow">How publishing works</span>
+      <h2 class="h3">Draft → published → closed</h2>
+      <ul class="check-list small">
+        <li><b>Draft:</b> only you can see it. Add and reorder questions freely.</li>
+        <li><b>Published:</b> participants with the access code can join and start.</li>
+        <li><b>Closed:</b> no new attempts, but existing results and grading remain.</li>
+      </ul>
+    </section>
+
+    <section class="card card-pad">
+      <span class="eyebrow">Locked after attempts</span>
+      <h2 class="h3">Questions freeze</h2>
+      <p class="muted small">
+        Once the first participant starts, question edits lock so stored answers stay valid.
+        Titles, instructions, time limits and result visibility stay editable.
+      </p>
+    </section>
+
+    <section class="card card-pad">
+      <span class="eyebrow">Fair timing</span>
+      <h2 class="h3">A cap that holds</h2>
+      <p class="muted small">
+        If you set both a time limit and a closing time, each attempt's deadline is the earlier
+        of the two. The server checks the clock on every request.
+      </p>
+    </section>
+  </aside>
+</div>
+{% endblock %}

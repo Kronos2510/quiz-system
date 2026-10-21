@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import attempt_status, quiz_status, empty_state, progress_bar with context %}
+{% block title %}Results · {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/host">Host dashboard</a>
+  <span>/</span>
+  <a href="/host/quizzes/{{ quiz.id }}/edit">{{ quiz.title }}</a>
+  <span>/</span>
+  <span>Results</span>
+</nav>
+
+<header class="page-head">
+  <div>
+    <div class="row gap-2 wrap center-y">
+      {{ quiz_status(quiz.status) }}
+      {% if quiz.results_released %}
+        <span class="pill pill-green">Results released</span>
+      {% else %}
+        <span class="pill pill-amber">Results sealed</span>
+      {% endif %}
+    </div>
+    <h1>Results & analytics</h1>
+    <p class="muted">{{ quiz.title }} · {{ quiz.questions | length }} questions · pass mark {{ quiz.pass_percent }}%</p>
+  </div>
+  <div class="row gap-2 wrap">
+    <a class="btn btn-ghost btn-sm" href="/host/quizzes/{{ quiz.id }}/submissions">Submissions</a>
+    <a class="btn btn-primary btn-sm" href="/host/quizzes/{{ quiz.id }}/export.csv">Export CSV</a>
+  </div>
+</header>
+
+<div class="release-banner {{ 'released' if quiz.results_released else 'sealed' }}">
+  <div>
+    <b>{{ 'Participants can see scores and feedback.' if quiz.results_released else 'Participants cannot see scores yet.' }}</b>
+    <span class="muted small">
+      {{ 'Hide results again if you need to adjust a grade.' if quiz.results_released else 'Grade written answers first, then release results when you are ready.' }}
+    </span>
+  </div>
+  {% if quiz.results_released %}
+    <form method="post" action="/host/quizzes/{{ quiz.id }}/release" data-confirm="Hide results from participants again?">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <input type="hidden" name="release" value="0">
+      <button class="btn btn-ghost btn-sm" type="submit">Hide results</button>
+    </form>
+  {% else %}
+    <form method="post" action="/host/quizzes/{{ quiz.id }}/release" data-confirm="Release results to all participants?">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <input type="hidden" name="release" value="1">
+      <button class="btn btn-primary btn-sm" type="submit">Release results</button>
+    </form>
+  {% endif %}
+</div>
+
+<section class="stat-grid">
+  <div class="stat"><span class="stat-label">Graded</span><span class="stat-value">{{ stats.graded_count }}<span class="muted">/{{ stats.submitted_count }}</span></span></div>
+  <div class="stat"><span class="stat-label">Average</span><span class="stat-value">{{ stats.average }}%</span></div>
+  <div class="stat"><span class="stat-label">Median</span><span class="stat-value">{{ stats.median }}%</span></div>
+  <div class="stat"><span class="stat-label">Pass rate</span><span class="stat-value">{{ stats.pass_rate }}%</span></div>
+</section>
+
+<div class="layout-2col">
+  <div class="stack gap-4">
+    <section class="card card-pad">
+      <div class="section-head tight">
+        <h2>Leaderboard</h2>
+        <span class="muted small">{{ leaderboard | length }} graded attempt{{ '' if leaderboard | length == 1 else 's' }}</span>
+      </div>
+      {% if leaderboard %}
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>#</th><th>Participant</th><th>Score</th><th>Percent</th><th>Submitted</th></tr></thead>
+            <tbody>
+              {% for attempt in leaderboard %}
+                <tr>
+                  <td><span class="rank {{ 'top' if loop.index <= 3 }}">{{ loop.index }}</span></td>
+                  <td>
+                    <div class="person">
+                      <span class="avatar small">{{ attempt.user.name[:1] | upper }}</span>
+                      <span><b>{{ attempt.user.name }}</b><span class="muted tiny">{{ attempt.user.email }}</span></span>
+                    </div>
+                  </td>
+                  <td><b>{{ attempt.score }}</b><span class="muted small">/{{ attempt.max_score }}</span></td>
+                  <td><span class="pill pill-{{ 'green' if attempt.percentage >= quiz.pass_percent else 'red' }}">{{ attempt.percentage }}%</span></td>
+                  <td class="muted small">{{ attempt.submitted_at | dt if attempt.submitted_at else '—' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted small">No graded attempts yet. Finalize grading to build the leaderboard.</p>
+      {% endif %}
+    </section>
+
+    <section class="card card-pad">
+      <div class="section-head tight">
+        <h2>All submissions</h2>
+        <a class="muted small" href="/host/quizzes/{{ quiz.id }}/submissions">Open grading queue</a>
+      </div>
+      {% if attempts %}
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>Participant</th><th>Status</th><th>Score</th><th>Submitted</th><th class="right"></th></tr></thead>
+            <tbody>
+              {% for attempt in attempts %}
+                <tr>
+                  <td>
+                    <div class="person">
+                      <span class="avatar small">{{ attempt.user.name[:1] | upper }}</span>
+                      <span><b>{{ attempt.user.name }}</b><span class="muted tiny">{{ attempt.user.email }}</span></span>
+                    </div>
+                  </td>
+                  <td>{{ attempt_status(attempt.status) }}</td>
+                  <td>
+                    {% if attempt.status == 'graded' %}
+                      <b>{{ attempt.score }}</b><span class="muted small">/{{ attempt.max_score }}</span>
+                    {% else %}
+                      <span class="muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="muted small">{{ attempt.submitted_at | dt if attempt.submitted_at else '—' }}</td>
+                  <td class="right"><a class="btn btn-ghost btn-sm" href="/host/attempts/{{ attempt.id }}/grade">{{ 'Review' if attempt.status == 'graded' else 'Grade' }}</a></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted small">No submissions yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="card card-pad">
+      <div class="section-head tight">
+        <h2>Question breakdown</h2>
+        <span class="muted small">Based on graded attempts</span>
+      </div>
+      {% if breakdown %}
+        <div class="stack gap-3">
+          {% for entry in breakdown %}
+            {% set question = entry.question %}
+            <article class="breakdown">
+              <div class="breakdown-head">
+                <span class="q-index">{{ entry.number }}</span>
+                <div class="grow">
+                  <div class="row gap-2 wrap center-y">
+                    <span class="pill {{ 'pill-cyan' if question.type == 'mcq' else 'pill-magenta' }}">{{ question.type_label }}</span>
+                    <span class="muted small">{{ question.points }} pt{{ '' if question.points == 1 else 's' }} · {{ entry.responses }} response{{ '' if entry.responses == 1 else 's' }}</span>
+                  </div>
+                  <b>{{ question.prompt }}</b>
+                </div>
+                {% if question.type == 'mcq' %}
+                  <div class="accuracy"><b>{{ entry.accuracy }}%</b><span>correct</span></div>
+                {% else %}
+                  <div class="accuracy"><b>{{ entry.average_points }}</b><span>avg / {{ question.points }}</span></div>
+                {% endif %}
+              </div>
+
+              {% if question.type == 'mcq' %}
+                <div class="dist-list">
+                  {% for row in entry.option_counts %}
+                    <div class="dist-row">
+                      <span class="dist-label {{ 'correct' if row.is_correct }}">{{ row.option.text }}</span>
+                      <div class="progress thin"><span class="progress-fill {{ 'progress-green' if row.is_correct else 'progress-gray' }}" style="width: {{ (row.count / (entry.responses if entry.responses else 1) * 100) | round(0, 'floor') }}%"></span></div>
+                      <span class="dist-count">{{ row.count }}</span>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="muted small">{{ entry.graded }} graded response{{ '' if entry.graded == 1 else 's' }} · average {{ entry.average_points }} of {{ question.points }} points.</p>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted small">Analytics appear once at least one attempt is graded.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="stack gap-4">
+    <section class="card card-pad">
+      <div class="section-head tight">
+        <h2 class="h3">Score distribution</h2>
+        <span class="muted small">{{ stats.graded_count }} graded</span>
+      </div>
+      <div class="dist-list">
+        {% for bucket in stats.distribution %}
+          <div class="dist-row">
+            <span class="dist-label">{{ bucket.label }}</span>
+            <div class="progress thin"><span class="progress-fill progress-cyan" style="width: {{ (bucket.count / stats.max_bucket * 100) | round(0, 'floor') }}%"></span></div>
+            <span class="dist-count">{{ bucket.count }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card card-pad">
+      <span class="eyebrow">Summary</span>
+      <div class="mini-stats">
+        <div><b>{{ stats.highest }}%</b><span>highest</span></div>
+        <div><b>{{ stats.lowest }}%</b><span>lowest</span></div>
+        <div><b>{{ stats.passed }}</b><span>passed</span></div>
+        <div><b>{{ stats.in_progress_count }}</b><span>in progress</span></div>
+      </div>
+    </section>
+
+    <section class="card card-pad">
+      <span class="eyebrow">Reminder</span>
+      <h2 class="h3">Releasing is reversible</h2>
+      <p class="muted small">
+        If you spot a grading mistake after release, hide results, adjust the score in the grading
+        screen and release again. Participants see the newest score.
+      </p>
+    </section>
+  </aside>
+</div>
+{% endblock %}

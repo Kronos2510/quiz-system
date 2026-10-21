@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Taking {{ quiz.title }} · {{ app_name }}{% endblock %}
+{% block mainclass %}page page-wide attempt-page{% endblock %}
+
+{% block content %}
+<div
+  id="attempt-root"
+  data-attempt-id="{{ attempt.id }}"
+  data-csrf="{{ csrf_token }}"
+  data-save-url="/api/attempts/{{ attempt.id }}/answer"
+  data-state-url="/api/attempts/{{ attempt.id }}/state"
+  data-total="{{ blocks | length }}"
+>
+  <div class="attempt-bar">
+    <div class="attempt-bar-left">
+      <a class="back-link" href="/dashboard">← Exit</a>
+      <div class="attempt-title">
+        <b>{{ quiz.title }}</b>
+        <span class="muted tiny">{{ blocks | length }} questions · {{ quiz.total_points }} points</span>
+      </div>
+    </div>
+
+    <div class="attempt-bar-right">
+      <span class="save-state" data-save-state>
+        <span class="save-dot"></span>
+        <span data-save-label>All changes saved</span>
+      </span>
+      <span class="answered-chip"><b data-answered>{{ answered }}</b>/{{ blocks | length }} answered</span>
+      {% if attempt.deadline_at %}
+        <div class="timer" data-timer-wrap>
+          <span class="timer-label">Time left</span>
+          <span class="timer-value" data-timer>{{ '%02d:%02d' % (remaining // 60, remaining % 60) }}</span>
+        </div>
+      {% else %}
+        <span class="pill pill-cyan">No time limit</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if attempt.deadline_at %}
+    <div class="timer-track" aria-hidden="true"><span data-timer-bar></span></div>
+  {% endif %}
+
+  <div class="attempt-grid">
+    <aside class="attempt-nav card">
+      <span class="eyebrow">Questions</span>
+      <div class="question-pips">
+        {% for block in blocks %}
+          <a href="#q-{{ block.question.id }}" class="question-pip" data-pip="{{ block.question.id }}" aria-label="Question {{ block.number }}">{{ block.number }}</a>
+        {% endfor %}
+      </div>
+      <div class="legend">
+        <span><i class="dot cyan"></i> Answered</span>
+        <span><i class="dot gray"></i> Empty</span>
+      </div>
+      <p class="muted tiny">Autosave runs every few seconds. You can also submit at any time.</p>
+    </aside>
+
+    <form method="post" action="/attempt/{{ attempt.id }}/submit" class="attempt-form" data-attempt-form>
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+      <div class="stack gap-4">
+        {% for block in blocks %}
+          {% set question = block.question %}
+          <article
+            class="question-card card"
+            id="q-{{ question.id }}"
+            data-question-card
+            data-question-id="{{ question.id }}"
+            data-question-type="{{ question.type }}"
+          >
+            <div class="question-head">
+              <span class="question-number">{{ '%02d' % block.number }}</span>
+              <div class="question-head-main">
+                <div class="row gap-2 wrap center-y">
+                  <span class="pill {{ 'pill-cyan' if question.type == 'mcq' else 'pill-magenta' }}">{{ question.type_label }}</span>
+                  <span class="muted small">{{ question.points }} point{{ '' if question.points == 1 else 's' }}</span>
+                </div>
+                <h2>{{ question.prompt }}</h2>
+              </div>
+            </div>
+
+            {% if question.type == 'mcq' %}
+              <div class="options">
+                {% for option in block.options %}
+                  <label class="option-row {{ 'selected' if block.selected_option_id == option.id }}">
+                    <input
+                      type="radio"
+                      name="q_{{ question.id }}"
+                      value="{{ option.id }}"
+                      {{ 'checked' if block.selected_option_id == option.id }}
+                      data-question="{{ question.id }}"
+                      data-option
+                    >
+                    <span class="option-marker" aria-hidden="true">{{ loop.index }}</span>
+                    <span class="option-text">{{ option.text }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            {% else %}
+              <label class="field">
+                <span class="sr-only">Your answer</span>
+                <textarea
+                  class="textarea answer-area"
+                  name="q_{{ question.id }}"
+                  rows="7"
+                  maxlength="20000"
+                  placeholder="Write your answer here. It saves automatically."
+                  data-question="{{ question.id }}"
+                  data-text
+                >{{ block.text_answer }}</textarea>
+              </label>
+              <div class="row between center-y small muted">
+                <span>Autosaves as you type</span>
+                <span data-char-count>{{ block.text_answer | length }} characters</span>
+              </div>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+
+      <div class="submit-panel card">
+        <div>
+          <h3>Ready to hand it in?</h3>
+          <p class="muted small">Once submitted, your answers lock. Unanswered questions can still be submitted.</p>
+        </div>
+        <div class="row gap-3 wrap">
+          <span class="answered-chip"><b data-answered>{{ answered }}</b>/{{ blocks | length }} answered</span>
+          <button class="btn btn-primary btn-lg" type="submit" data-submit-button>Submit answers</button>
+        </div>
+      </div>
+
+      <noscript>
+        <div class="notice notice-error">Autosave needs JavaScript. You can still answer and submit — just save your work before the deadline.</div>
+      </noscript>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/quiz.js" defer></script>
+{% endblock %}

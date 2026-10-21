@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Sign in · {{ app_name }}{% endblock %}
+{% block mainclass %}auth-page{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+  <section class="auth-card">
+    <div class="auth-head">
+      <span class="eyebrow">Welcome back</span>
+      <h1>Sign in to {{ app_name }}</h1>
+      <p class="muted">Use the account your host or admin approved.</p>
+    </div>
+
+    {% if error %}
+      <div class="notice notice-error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/login" class="stack gap-5">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <input type="hidden" name="next" value="{{ next_url }}">
+
+      <label class="field">
+        <span class="label">Email</span>
+        <input class="input" type="email" name="email" value="{{ email }}" autocomplete="email" required autofocus placeholder="you@example.com">
+      </label>
+
+      <label class="field">
+        <span class="label">Password</span>
+        <input class="input" type="password" name="password" autocomplete="current-password" required placeholder="••••••••">
+      </label>
+
+      <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+    </form>
+
+    <p class="auth-foot muted">
+      New here? <a href="/register">Create an account</a>. Hosts need admin approval; participants need a host's approval.
+    </p>
+  </section>
+
+  <aside class="auth-aside">
+    <div class="auth-aside-inner">
+      <span class="brand-mark big" aria-hidden="true">Q</span>
+      <h2>One code. One fair attempt.</h2>
+      <p>Every quiz is invitation-only. Your deadline is enforced on the server, and your answers save as you go.</p>
+      <ul class="check-list">
+        <li>Autosave while you write</li>
+        <li>Server-side timer</li>
+        <li>Feedback after release</li>
+      </ul>
+    </div>
+    <div class="auth-glow" aria-hidden="true"></div>
+  </aside>
+</div>
+{% endblock %}

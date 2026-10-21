@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Awaiting approval · {{ app_name }}{% endblock %}
+{% block mainclass %}page page-narrow{% endblock %}
+
+{% block content %}
+<section class="centered-card">
+  <div class="status-orb" aria-hidden="true">
+    <span class="status-orb-ring"></span>
+    <span class="status-orb-core">⏳</span>
+  </div>
+  <span class="eyebrow">Request received</span>
+  <h1>You're in the queue{% if name %}, {{ name }}{% endif %}.</h1>
+
+  {% if role == "host" %}
+    <p class="muted lede">
+      The platform admin reviews host accounts. Once approved, you can sign in, build quizzes
+      and approve the participants who join you.
+    </p>
+  {% elif role == "participant" %}
+    <p class="muted lede">
+      A host needs to approve participant accounts. Once that's done you can sign in, redeem
+      an access code and start taking quizzes.
+    </p>
+  {% else %}
+    <p class="muted lede">
+      Accounts are approved manually. Hosts are approved by the platform admin; participants
+      are approved by a host.
+    </p>
+  {% endif %}
+
+  <div class="notice notice-info">
+    <b>What happens next?</b>
+    <span>Keep an eye on this email address. Approval doesn't send an automatic notification yet — your host or admin will let you know when to sign in.</span>
+  </div>
+
+  <div class="row gap-3 wrap center">
+    <a class="btn btn-primary" href="/login">Go to sign in</a>
+    <a class="btn btn-ghost" href="/">Back to home</a>
+  </div>
+</section>
+{% endblock %}

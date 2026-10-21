@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Create an account · {{ app_name }}{% endblock %}
+{% block mainclass %}auth-page{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+  <section class="auth-card wide">
+    <div class="auth-head">
+      <span class="eyebrow">Get started</span>
+      <h1>Create your account</h1>
+      <p class="muted">Pick the role that fits. Approvals keep quizzes and results private.</p>
+    </div>
+
+    {% if error %}
+      <div class="notice notice-error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/register" class="stack gap-5">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+      <fieldset class="role-picker">
+        <legend class="label">I want to…</legend>
+        <label class="role-option {{ 'selected' if role == 'participant' }}">
+          <input type="radio" name="role" value="participant" {{ 'checked' if role != 'host' }}>
+          <span class="role-option-body">
+            <b>Take quizzes</b>
+            <span class="muted small">Register as a participant. A host approves your account before you can sign in.</span>
+          </span>
+        </label>
+        <label class="role-option {{ 'selected' if role == 'host' }}">
+          <input type="radio" name="role" value="host" {{ 'checked' if role == 'host' }}>
+          <span class="role-option-body">
+            <b>Host quizzes</b>
+            <span class="muted small">Register as a host. The platform admin approves host accounts.</span>
+          </span>
+        </label>
+      </fieldset>
+
+      <div class="form-grid">
+        <label class="field">
+          <span class="label">Full name</span>
+          <input class="input" type="text" name="name" value="{{ form.name or '' }}" autocomplete="name" required minlength="2" maxlength="80" placeholder="Ada Lovelace">
+        </label>
+        <label class="field">
+          <span class="label">Email</span>
+          <input class="input" type="email" name="email" value="{{ form.email or '' }}" autocomplete="email" required placeholder="you@example.com">
+        </label>
+      </div>
+
+      <div class="form-grid">
+        <label class="field">
+          <span class="label">Password</span>
+          <input class="input" type="password" name="password" autocomplete="new-password" required minlength="8" placeholder="At least 8 characters">
+        </label>
+        <label class="field">
+          <span class="label">Confirm password</span>
+          <input class="input" type="password" name="confirm" autocomplete="new-password" required minlength="8" placeholder="Repeat it">
+        </label>
+      </div>
+
+      <button class="btn btn-primary btn-block" type="submit">Request an account</button>
+    </form>
+
+    <p class="auth-foot muted">Already approved? <a href="/login">Sign in instead</a>.</p>
+  </section>
+
+  <aside class="auth-aside">
+    <div class="auth-aside-inner">
+      <span class="brand-mark big" aria-hidden="true">Q</span>
+      <h2>Approval is the point.</h2>
+      <p>Random signups can't see quizzes, and access codes only work for approved accounts. Your cohort stays yours.</p>
+      <ul class="check-list">
+        <li>Admin approves hosts</li>
+        <li>Hosts approve participants</li>
+        <li>Access code required per quiz</li>
+      </ul>
+    </div>
+    <div class="auth-glow" aria-hidden="true"></div>
+  </aside>
+</div>
+{% endblock %}

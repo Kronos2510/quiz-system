@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import attempt_status, quiz_status, empty_state with context %}
+{% block title %}Submissions · {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/host">Host dashboard</a>
+  <span>/</span>
+  <a href="/host/quizzes/{{ quiz.id }}/edit">{{ quiz.title }}</a>
+  <span>/</span>
+  <span>Submissions</span>
+</nav>
+
+<header class="page-head">
+  <div>
+    <div class="row gap-2 wrap center-y">
+      {{ quiz_status(quiz.status) }}
+      <span class="muted small mono">{{ quiz.access_code }}</span>
+    </div>
+    <h1>Submissions</h1>
+    <p class="muted">{{ quiz.title }} · {{ stats.submitted_count }} submitted · {{ stats.graded_count }} graded</p>
+  </div>
+  <div class="row gap-2 wrap">
+    <a class="btn btn-ghost btn-sm" href="/host/quizzes/{{ quiz.id }}/edit">Edit quiz</a>
+    <a class="btn btn-primary btn-sm" href="/host/quizzes/{{ quiz.id }}/results">View results</a>
+  </div>
+</header>
+
+<section class="stat-grid">
+  <div class="stat"><span class="stat-label">Submitted</span><span class="stat-value">{{ stats.submitted_count }}</span></div>
+  <div class="stat"><span class="stat-label">Graded</span><span class="stat-value">{{ stats.graded_count }}</span></div>
+  <div class="stat"><span class="stat-label">Average</span><span class="stat-value">{{ stats.average }}%</span></div>
+  <div class="stat"><span class="stat-label">Awaiting your score</span><span class="stat-value {{ 'text-amber' if stats.submitted_count - stats.graded_count }}">{{ stats.submitted_count - stats.graded_count }}</span></div>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <div class="tabs" role="navigation" aria-label="Filter submissions">
+      {% for key, label in [('all', 'All'), ('submitted', 'Needs grading'), ('graded', 'Graded'), ('in_progress', 'In progress')] %}
+        <a class="tab {{ 'active' if status == key }}" href="/host/quizzes/{{ quiz.id }}/submissions?status={{ key }}">{{ label }}</a>
+      {% endfor %}
+    </div>
+    <span class="muted small">{{ attempts | length }} shown</span>
+  </div>
+
+  {% if attempts %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Participant</th>
+            <th>Started</th>
+            <th>Submitted</th>
+            <th>Status</th>
+            <th>Score</th>
+            <th class="right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for attempt in attempts %}
+            <tr>
+              <td>
+                <div class="person">
+                  <span class="avatar small">{{ attempt.user.name[:1] | upper }}</span>
+                  <span><b>{{ attempt.user.name }}</b><span class="muted tiny">{{ attempt.user.email }}</span></span>
+                </div>
+              </td>
+              <td class="muted small">{{ attempt.started_at | dt }}</td>
+              <td class="muted small">{{ attempt.submitted_at | dt if attempt.submitted_at else '—' }}</td>
+              <td>{{ attempt_status(attempt.status) }}</td>
+              <td>
+                {% if attempt.status == 'graded' %}
+                  <b>{{ attempt.score }}</b><span class="muted small">/{{ attempt.max_score }}</span>
+                  <span class="pill pill-{{ 'green' if attempt.percentage >= quiz.pass_percent else 'red' }}">{{ attempt.percentage }}%</span>
+                {% else %}
+                  <span class="muted">—</span>
+                {% endif %}
+              </td>
+              <td class="right">
+                {% if attempt.status == 'in_progress' %}
+                  <span class="muted small">Still taking</span>
+                {% else %}
+                  <a class="btn btn-primary btn-sm" href="/host/attempts/{{ attempt.id }}/grade">{{ 'Review' if attempt.status == 'graded' else 'Grade' }}</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card-pad">
+      {{ empty_state("Nothing in this view", "Submissions appear here as participants finish their attempts.") }}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

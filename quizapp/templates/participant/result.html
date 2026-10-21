@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import attempt_status, pill with context %}
+{% block title %}Result · {{ quiz.title }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/dashboard">Dashboard</a>
+  <span>/</span>
+  <a href="/quiz/{{ quiz.id }}">{{ quiz.title }}</a>
+  <span>/</span>
+  <span>Attempt #{{ attempt.id }}</span>
+</nav>
+
+<section class="result-hero card">
+  <div class="result-hero-main">
+    <div class="row gap-2 wrap center-y">
+      <span class="eyebrow">Attempt #{{ attempt.id }}</span>
+      {{ attempt_status(attempt.status) }}
+      {% if released %}
+        {{ pill("Passed", "green") if passed else pill("Not passed", "red") }}
+      {% endif %}
+    </div>
+    <h1>{{ quiz.title }}</h1>
+    <p class="muted">
+      Submitted {{ attempt.submitted_at | dt if attempt.submitted_at else '—' }}
+      · {{ quiz.questions | length }} questions · {{ attempt.max_score or quiz.total_points }} points
+    </p>
+
+    {% if released %}
+      <div class="result-score-row">
+        <div class="score-ring" style="--score: {{ attempt.percentage }}"><b>{{ attempt.percentage }}%</b><span>score</span></div>
+        <div class="result-figures">
+          <div><span class="meta-label">Points</span><b>{{ attempt.score }} / {{ attempt.max_score }}</b></div>
+          <div><span class="meta-label">Pass mark</span><b>{{ quiz.pass_percent }}%</b></div>
+          <div><span class="meta-label">Graded</span><b>{{ attempt.graded_at | dt if attempt.graded_at else '—' }}</b></div>
+        </div>
+      </div>
+    {% elif awaiting_grade %}
+      <div class="notice notice-info">
+        <b>Submitted — your host is grading.</b>
+        <span>Multiple-choice questions are already scored. Written answers are being read manually. Results appear here once released.</span>
+      </div>
+    {% elif not_released %}
+      <div class="notice notice-info">
+        <b>Grading complete — results are sealed.</b>
+        <span>Your host hasn't released this quiz's results yet. Check back later.</span>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+{% if released %}
+  <div class="stat-grid">
+    <div class="stat"><span class="stat-label">Multiple choice</span><span class="stat-value">{{ mcq_count }}</span></div>
+    <div class="stat"><span class="stat-label">Written</span><span class="stat-value">{{ written_count }}</span></div>
+    <div class="stat"><span class="stat-label">Outcome</span><span class="stat-value {{ 'text-green' if passed else 'text-red' }}">{{ 'Pass' if passed else 'Not yet' }}</span></div>
+    <div class="stat"><span class="stat-label">Score</span><span class="stat-value">{{ attempt.percentage }}%</span></div>
+  </div>
+{% endif %}
+
+<section class="stack gap-4">
+  <div class="section-head tight">
+    <h2>Answer breakdown</h2>
+    <span class="muted small">{{ 'Feedback is visible' if released else 'Correctness is hidden until release' }}</span>
+  </div>
+
+  {% for row in rows %}
+    {% set question = row.question %}
+    {% set answer = row.answer %}
+    <article class="card review-card">
+      <div class="review-head">
+        <span class="question-number small">{{ '%02d' % row.number }}</span>
+        <div class="grow">
+          <div class="row gap-2 wrap center-y">
+            <span class="pill {{ 'pill-cyan' if question.type == 'mcq' else 'pill-magenta' }}">{{ question.type_label }}</span>
+            <span class="muted small">{{ question.points }} point{{ '' if question.points == 1 else 's' }}</span>
+            {% if released %}
+              {% if question.type == 'mcq' %}
+                {{ pill("Correct", "green") if row.correct else pill("Incorrect", "red") }}
+              {% else %}
+                <span class="pill {{ 'pill-green' if row.points >= question.points else 'pill-amber' }}">{{ row.points }}/{{ question.points }} pts</span>
+              {% endif %}
+            {% endif %}
+          </div>
+          <h3>{{ question.prompt }}</h3>
+        </div>
+        {% if released %}
+          <div class="review-points"><b>{{ row.points }}</b><span>/{{ question.points }}</span></div>
+        {% endif %}
+      </div>
+
+      <div class="review-body">
+        <div class="answer-panel">
+          <span class="meta-label">Your answer</span>
+          {% if question.type == 'mcq' %}
+            {% if row.selected_text %}
+              <p class="{{ 'text-green' if released and row.correct else ('text-red' if released else '') }}">{{ row.selected_text }}</p>
+            {% else %}
+              <p class="muted">No option selected.</p>
+            {% endif %}
+          {% else %}
+            {% if answer and answer.text_answer %}
+              <p class="answer-text">{{ answer.text_answer }}</p>
+            {% else %}
+              <p class="muted">No answer written.</p>
+            {% endif %}
+          {% endif %}
+        </div>
+
+        {% if released and question.type == 'mcq' and not row.correct %}
+          <div class="answer-panel correct-panel">
+            <span class="meta-label">Correct answer</span>
+            <p class="text-green">{{ question.correct_option.text if question.correct_option else '—' }}</p>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if released %}
+        {% if question.type == 'written' and answer and answer.feedback %}
+          <div class="feedback-panel">
+            <span class="meta-label">Feedback from your host</span>
+            <p>{{ answer.feedback }}</p>
+          </div>
+        {% endif %}
+        {% if question.explanation %}
+          <div class="explanation-panel">
+            <span class="meta-label">Why this answer</span>
+            <p>{{ question.explanation }}</p>
+          </div>
+        {% endif %}
+      {% endif %}
+    </article>
+  {% endfor %}
+</section>
+
+<div class="row gap-3 wrap center">
+  <a class="btn btn-primary" href="/dashboard">Back to dashboard</a>
+  <a class="btn btn-ghost" href="/quiz/{{ quiz.id }}">Quiz overview</a>
+</div>
+{% endblock %}

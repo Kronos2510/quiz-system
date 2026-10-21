@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import quiz_status, attempt_status, empty_state with context %}
+{% block title %}Host dashboard · {{ app_name }}{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <span class="eyebrow">Host dashboard</span>
+    <h1>Welcome back, {{ user.name.split(' ')[0] }}.</h1>
+    <p class="muted">Build quizzes, approve participants and clear the grading queue.</p>
+  </div>
+  <div class="row gap-2 wrap">
+    <a class="btn btn-ghost" href="/host/participants">Participants</a>
+    <a class="btn btn-primary" href="/host/quizzes/new">New quiz</a>
+  </div>
+</header>
+
+<section class="stat-grid">
+  <div class="stat"><span class="stat-label">Quizzes</span><span class="stat-value">{{ totals.quizzes }}</span></div>
+  <div class="stat"><span class="stat-label">Approved participants</span><span class="stat-value">{{ totals.participants }}</span></div>
+  <div class="stat"><span class="stat-label">Awaiting grading</span><span class="stat-value {{ 'text-amber' if totals.to_grade }}">{{ totals.to_grade }}</span></div>
+  <div class="stat"><span class="stat-label">Submissions</span><span class="stat-value">{{ totals.submitted }}</span></div>
+</section>
+
+{% if pending_participants %}
+  <section class="notice notice-warning with-action">
+    <div>
+      <b>{{ pending_participants | length }} participant{{ '' if pending_participants | length == 1 else 's' }} waiting for approval.</b>
+      <span>{{ pending_participants | map(attribute='name') | join(', ') }}</span>
+    </div>
+    <a class="btn btn-ghost btn-sm" href="/host/participants">Review</a>
+  </section>
+{% endif %}
+
+<div class="layout-2col">
+  <section class="stack gap-4">
+    <div class="section-head tight">
+      <h2>Your quizzes</h2>
+      <a class="muted small" href="/host/quizzes/new">+ New quiz</a>
+    </div>
+
+    {% if cards %}
+      <div class="stack gap-3">
+        {% for card in cards %}
+          {% set quiz = card.quiz %}
+          <article class="quiz-row card">
+            <div class="quiz-row-main">
+              <div class="row gap-2 wrap center-y">
+                {{ quiz_status(quiz.status) }}
+                <button class="code-chip" type="button" data-copy="{{ quiz.access_code }}" title="Copy access code">
+                  {{ quiz.access_code }}
+                  <span aria-hidden="true">⧉</span>
+                </button>
+                {% if card.to_grade %}
+                  <span class="pill pill-amber">{{ card.to_grade }} to grade</span>
+                {% endif %}
+              </div>
+              <h3><a href="/host/quizzes/{{ quiz.id }}/edit">{{ quiz.title }}</a></h3>
+              <p class="muted small clamp-1">{{ quiz.description or 'No description yet.' }}</p>
+              <div class="meta-row">
+                <span>{{ quiz.questions | length }} questions</span>
+                <span>{{ quiz.total_points }} pts</span>
+                <span>{{ card.enrolled }} enrolled</span>
+                <span>{{ card.submitted }} submitted</span>
+                <span>{{ card.graded }} graded</span>
+              </div>
+            </div>
+            <div class="quiz-row-actions">
+              <a class="btn btn-ghost btn-sm" href="/host/quizzes/{{ quiz.id }}/edit">Edit</a>
+              <a class="btn btn-ghost btn-sm" href="/host/quizzes/{{ quiz.id }}/submissions">Submissions</a>
+              <a class="btn btn-primary btn-sm" href="/host/quizzes/{{ quiz.id }}/results">Results</a>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card card-pad">
+        {{ empty_state("No quizzes yet", "Create a draft, add questions, then publish it with an access code.") }}
+        <div class="center"><a class="btn btn-primary" href="/host/quizzes/new">Create your first quiz</a></div>
+      </div>
+    {% endif %}
+  </section>
+
+  <aside class="stack gap-4">
+    <section class="card card-pad">
+      <div class="section-head tight">
+        <h2 class="h3">Recent submissions</h2>
+        <a class="muted small" href="/host/participants">Participants</a>
+      </div>
+      {% if recent_attempts %}
+        <div class="stack gap-3">
+          {% for attempt in recent_attempts %}
+            <a class="activity-row" href="/host/attempts/{{ attempt.id }}/grade">
+              <span class="avatar small">{{ attempt.user.name[:1] | upper }}</span>
+              <span class="grow">
+                <b>{{ attempt.user.name }}</b>
+                <span class="muted tiny">{{ attempt.quiz.title }}</span>
+              </span>
+              {{ attempt_status(attempt.status) }}
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted small">No submissions yet. Share an access code to get started.</p>
+      {% endif %}
+    </section>
+
+    <section class="card card-pad">
+      <span class="eyebrow">Host checklist</span>
+      <h2 class="h3">Before you publish</h2>
+      <ul class="check-list small">
+        <li>Every multiple-choice question has one correct option</li>
+        <li>Written questions have a model answer for grading</li>
+        <li>Time limit and attempt cap feel fair</li>
+        <li>You know which participants are approved</li>
+      </ul>
+      <a class="btn btn-ghost btn-block btn-sm" href="/host/participants">Manage participants</a>
+    </section>
+  </aside>
+</div>
+{% endblock %}

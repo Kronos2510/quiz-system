@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import user_status, empty_state with context %}
+{% block title %}Participants · {{ app_name }}{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <span class="eyebrow">Host workspace</span>
+    <h1>Participants</h1>
+    <p class="muted">Approve the people who should be able to sign in and redeem your quiz codes.</p>
+  </div>
+  <a class="btn btn-primary" href="/host">Back to dashboard</a>
+</header>
+
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>Waiting for approval</h2>
+      <span class="muted small">{{ pending | length }} pending</span>
+    </div>
+  </div>
+
+  {% if pending %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Name</th><th>Email</th><th>Requested</th><th class="right">Decision</th></tr></thead>
+        <tbody>
+          {% for person in pending %}
+            <tr>
+              <td>
+                <div class="person">
+                  <span class="avatar small">{{ person.name[:1] | upper }}</span>
+                  <b>{{ person.name }}</b>
+                </div>
+              </td>
+              <td class="muted">{{ person.email }}</td>
+              <td class="muted small">{{ person.created_at | ago }}</td>
+              <td class="right">
+                <div class="row gap-2 end">
+                  <form method="post" action="/host/participants/{{ person.id }}/reject">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                    <button class="btn btn-ghost btn-sm" type="submit">Reject</button>
+                  </form>
+                  <form method="post" action="/host/participants/{{ person.id }}/approve">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                    <button class="btn btn-primary btn-sm" type="submit">Approve</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card-pad">
+      {{ empty_state("No pending requests", "New participant registrations land here for your approval.") }}
+    </div>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>Approved participants</h2>
+      <span class="muted small">{{ approved | length }} can sign in</span>
+    </div>
+  </div>
+
+  {% if approved %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Attempts on your quizzes</th><th>Approved by</th></tr></thead>
+        <tbody>
+          {% for person in approved %}
+            <tr>
+              <td>
+                <div class="person">
+                  <span class="avatar small">{{ person.name[:1] | upper }}</span>
+                  <b>{{ person.name }}</b>
+                </div>
+              </td>
+              <td class="muted">{{ person.email }}</td>
+              <td>{{ user_status(person.status) }}</td>
+              <td><span class="pill pill-cyan">{{ attempt_counts.get(person.id, 0) }}</span></td>
+              <td class="muted small">{{ 'You' if person.approved_by == user.id else 'Another host / admin' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card-pad">
+      {{ empty_state("Nobody approved yet", "Approve a pending registration to let a participant sign in.") }}
+    </div>
+  {% endif %}
+</section>
+
+<div class="notice notice-info">
+  <b>One approval, all quizzes.</b>
+  <span>Approving a participant activates their account. They still need each quiz's access code to join, and they only see quizzes they've joined.</span>
+</div>
+{% endblock %}

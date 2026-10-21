@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import attempt_status with context %}
+{% block title %}Grade {{ attempt.user.name }} · {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/host">Host dashboard</a>
+  <span>/</span>
+  <a href="/host/quizzes/{{ quiz.id }}/submissions">{{ quiz.title }}</a>
+  <span>/</span>
+  <span>Grade attempt #{{ attempt.id }}</span>
+</nav>
+
+{% set ns = namespace(auto=0, manual=0) %}
+{% for question in questions %}
+  {% set answer = answers[question.id] %}
+  {% if question.type == 'mcq' and answer and answer.auto_points is not none %}
+    {% set ns.auto = ns.auto + answer.auto_points %}
+  {% elif question.type == 'written' and answer and answer.manual_points is not none %}
+    {% set ns.manual = ns.manual + answer.manual_points %}
+  {% endif %}
+{% endfor %}
+
+<header class="page-head">
+  <div>
+    <div class="row gap-2 wrap center-y">
+      {{ attempt_status(attempt.status) }}
+      <span class="muted small">Attempt #{{ attempt.id }}</span>
+    </div>
+    <h1>{{ attempt.user.name }}</h1>
+    <p class="muted">{{ attempt.user.email }} · {{ quiz.title }}</p>
+  </div>
+  <div class="score-summary">
+    <div><span class="meta-label">MCQ auto</span><b>{{ ns.auto }}</b></div>
+    <div><span class="meta-label">Written</span><b>{{ ns.manual }}</b></div>
+    <div class="total"><span class="meta-label">Total</span><b>{{ ns.auto + ns.manual }}<span class="muted">/{{ attempt.max_score }}</span></b></div>
+  </div>
+</header>
+
+{% if errors %}
+  <div class="notice notice-error">
+    <b>Fix these scores:</b>
+    <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+
+{% if attempt.status == 'graded' %}
+  <div class="notice notice-success">
+    <b>This attempt is already graded.</b>
+    <span>Final score {{ attempt.score }}/{{ attempt.max_score }} ({{ attempt.percentage }}%) · graded {{ attempt.graded_at | dt }}. Saving again updates the score.</span>
+  </div>
+{% else %}
+  <div class="notice notice-info">
+    <b>{{ attempt.submitted_at | dt }}</b>
+    <span>Multiple-choice answers are scored automatically. Score each written answer, then finalize the attempt.</span>
+  </div>
+{% endif %}
+
+<form method="post" action="/host/attempts/{{ attempt.id }}/grade" class="stack gap-4">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+  <div class="stack gap-4">
+    {% for question in questions %}
+      {% set answer = answers[question.id] %}
+      <article class="card grade-card">
+        <div class="grade-head">
+          <span class="question-number small">{{ '%02d' % loop.index }}</span>
+          <div class="grow">
+            <div class="row gap-2 wrap center-y">
+              <span class="pill {{ 'pill-cyan' if question.type == 'mcq' else 'pill-magenta' }}">{{ question.type_label }}</span>
+              <span class="muted small">{{ question.points }} point{{ '' if question.points == 1 else 's' }}</span>
+              {% if question.type == 'mcq' %}
+                <span class="pill {{ 'pill-green' if answer and answer.auto_points == question.points else 'pill-red' }}">
+                  {{ 'Correct' if answer and answer.auto_points == question.points else 'Incorrect' }}
+                </span>
+              {% endif %}
+            </div>
+            <h2>{{ question.prompt }}</h2>
+          </div>
+          {% if question.type == 'mcq' %}
+            <div class="auto-score">
+              <span class="meta-label">Auto</span>
+              <b>{{ answer.auto_points if answer and answer.auto_points is not none else 0 }}</b><span class="muted">/{{ question.points }}</span>
+            </div>
+          {% else %}
+            {% set pv = posted.get('points_' ~ question.id) if posted else (answer.manual_points if answer and answer.manual_points is not none else '') %}
+            <div class="manual-score">
+              <span class="meta-label">Score</span>
+              <div class="score-input">
+                <input class="input" type="number" name="points_{{ question.id }}" min="0" max="{{ question.points }}" step="1" value="{{ pv }}" placeholder="—">
+                <span class="muted">/{{ question.points }}</span>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        {% if question.type == 'mcq' %}
+          <div class="grade-options">
+            {% for option in question.options %}
+              {% set is_selected = answer and answer.selected_option_id == option.id %}
+              <div class="grade-option {{ 'correct' if option.is_correct }} {{ 'wrong' if is_selected and not option.is_correct }}">
+                <span class="option-marker">{{ loop.index }}</span>
+                <span class="grow">{{ option.text }}</span>
+                {% if is_selected %}<span class="pill pill-cyan">Chosen</span>{% endif %}
+                {% if option.is_correct %}<span class="pill pill-green">Correct</span>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="grade-compare">
+            <div class="grade-panel">
+              <span class="meta-label">Participant's answer</span>
+              {% if answer and answer.text_answer %}
+                <p class="answer-text">{{ answer.text_answer }}</p>
+              {% else %}
+                <p class="muted">No answer written.</p>
+              {% endif %}
+            </div>
+            <div class="grade-panel model">
+              <span class="meta-label">Model answer</span>
+              {% if question.model_answer %}
+                <p class="answer-text">{{ question.model_answer }}</p>
+              {% else %}
+                <p class="muted">No model answer was provided for this question.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          {% set fv = posted.get('feedback_' ~ question.id) if posted else (answer.feedback if answer else '') %}
+          <label class="field">
+            <span class="label">Feedback for {{ attempt.user.name.split(' ')[0] }}</span>
+            <textarea class="textarea" name="feedback_{{ question.id }}" rows="2" maxlength="5000" placeholder="What worked, what to improve…">{{ fv }}</textarea>
+          </label>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </div>
+
+  <div class="grade-actions card">
+    <div>
+      <b>{{ 'Update the final score' if attempt.status == 'graded' else 'Two ways to finish' }}</b>
+      <p class="muted small">Save progress without finalizing, or finalize once every written answer has a score.</p>
+    </div>
+    <div class="row gap-2 wrap">
+      <button class="btn btn-ghost" type="submit" name="action" value="save">Save progress</button>
+      <button class="btn btn-primary" type="submit" name="action" value="finalize">{{ 'Re-finalize' if attempt.status == 'graded' else 'Finalize grading' }}</button>
+    </div>
+  </div>
+</form>
+
+<a class="back-link" href="/host/quizzes/{{ quiz.id }}/submissions">← Back to submissions</a>
+{% endblock %}

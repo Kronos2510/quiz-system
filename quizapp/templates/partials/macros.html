@@ -1,0 +1,43 @@
+{% macro pill(text, tone="gray") -%}
+<span class="pill pill-{{ tone }}">{{ text }}</span>
+{%- endmacro %}
+
+{% macro quiz_status(status) -%}
+{% if status == "published" %}{{ pill("Published", "green") }}
+{% elif status == "draft" %}{{ pill("Draft", "gray") }}
+{% elif status == "closed" %}{{ pill("Closed", "red") }}
+{% else %}{{ pill(status, "gray") }}{% endif %}
+{%- endmacro %}
+
+{% macro attempt_status(status) -%}
+{% if status == "graded" %}{{ pill("Graded", "green") }}
+{% elif status == "submitted" %}{{ pill("Needs grading", "amber") }}
+{% elif status == "in_progress" %}{{ pill("In progress", "cyan") }}
+{% else %}{{ pill(status, "gray") }}{% endif %}
+{%- endmacro %}
+
+{% macro user_status(status) -%}
+{% if status == "approved" %}{{ pill("Approved", "green") }}
+{% elif status == "pending" %}{{ pill("Pending", "amber") }}
+{% elif status == "rejected" %}{{ pill("Rejected", "red") }}
+{% elif status == "disabled" %}{{ pill("Disabled", "gray") }}
+{% else %}{{ pill(status, "gray") }}{% endif %}
+{%- endmacro %}
+
+{% macro role_label(role) -%}
+{% if role == "admin" %}{{ pill("Admin", "magenta") }}
+{% elif role == "host" %}{{ pill("Host", "violet") }}
+{% else %}{{ pill("Participant", "cyan") }}{% endif %}
+{%- endmacro %}
+
+{% macro empty_state(title, message) -%}
+<div class="empty">
+  <div class="empty-mark" aria-hidden="true">◇</div>
+  <h3>{{ title }}</h3>
+  <p class="muted">{{ message }}</p>
+</div>
+{%- endmacro %}
+
+{% macro progress_bar(value, max=100, tone="cyan") -%}
+<div class="progress"><span class="progress-fill progress-{{ tone }}" style="width: {{ (value / (max if max else 1) * 100) | round(0, 'floor') }}%"></span></div>
+{%- endmacro %}

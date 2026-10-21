@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import quiz_status, empty_state with context %}
+{% block title %}{{ quiz.title }} · Edit · {{ app_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/host">Host dashboard</a>
+  <span>/</span>
+  <span>{{ quiz.title }}</span>
+</nav>
+
+<header class="page-head">
+  <div>
+    <div class="row gap-2 wrap center-y">
+      {{ quiz_status(quiz.status) }}
+      <button class="code-chip" type="button" data-copy="{{ quiz.access_code }}" title="Copy access code">
+        {{ quiz.access_code }} <span aria-hidden="true">⧉</span>
+      </button>
+      {% if locked %}<span class="pill pill-amber">Questions locked</span>{% endif %}
+    </div>
+    <h1>{{ quiz.title }}</h1>
+    <p class="muted">Draft, publish and grade from here.</p>
+  </div>
+  <div class="row gap-2 wrap">
+    <a class="btn btn-ghost btn-sm" href="/host/quizzes/{{ quiz.id }}/submissions">Submissions</a>
+    <a class="btn btn-ghost btn-sm" href="/host/quizzes/{{ quiz.id }}/results">Results</a>
+    {% if quiz.status == 'draft' %}
+      <form method="post" action="/host/quizzes/{{ quiz.id }}/publish">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+        <button class="btn btn-primary btn-sm" type="submit">Publish quiz</button>
+      </form>
+    {% elif quiz.status == 'published' %}
+      <form method="post" action="/host/quizzes/{{ quiz.id }}/close" data-confirm="Close this quiz? No new attempts will start.">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+        <button class="btn btn-ghost btn-sm" type="submit">Close quiz</button>
+      </form>
+    {% elif quiz.status == 'closed' %}
+      <form method="post" action="/host/quizzes/{{ quiz.id }}/reopen">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+        <button class="btn btn-primary btn-sm" type="submit">Reopen quiz</button>
+      </form>
+    {% endif %}
+  </div>
+</header>
+
+<div class="layout-2col">
+  <div class="stack gap-4">
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>Questions</h2>
+          <span class="muted small">{{ quiz.questions | length }} question{{ '' if quiz.questions | length == 1 else 's' }} · {{ quiz.total_points }} points total</span>
+        </div>
+        {% if not locked %}
+          <div class="row gap-2 wrap">
+            <a class="btn btn-ghost btn-sm" href="/host/quizzes/{{ quiz.id }}/questions/new?type=written">+ Written</a>
+            <a class="btn btn-primary btn-sm" href="/host/quizzes/{{ quiz.id }}/questions/new?type=mcq">+ Multiple choice</a>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if locked %}
+        <div class="notice notice-warning compact">
+          <b>Questions are frozen.</b>
+          <span>Attempts already exist, so editing questions would invalidate stored answers. You can still change titles, instructions, timing and results visibility.</span>
+        </div>
+      {% endif %}
+
+      <div class="question-admin-list">
+        {% if quiz.questions %}
+          {% for question in quiz.questions %}
+            <article class="question-admin">
+              <div class="question-admin-main">
+                <div class="row gap-2 wrap center-y">
+                  <span class="q-index">{{ loop.index }}</span>
+                  <span class="pill {{ 'pill-cyan' if question.type == 'mcq' else 'pill-magenta' }}">{{ question.type_label }}</span>
+                  <span class="muted small">{{ question.points }} pt{{ '' if question.points == 1 else 's' }}</span>
+                  {% if question.type == 'written' and not question.model_answer %}
+                    <span class="pill pill-amber">No model answer</span>
+                  {% endif %}
+                </div>
+                <h3>{{ question.prompt }}</h3>
+                {% if question.type == 'mcq' %}
+                  <ul class="option-preview">
+                    {% for option in question.options %}
+                      <li class="{{ 'correct' if option.is_correct }}">
+                        <span class="option-mark">{{ '✓' if option.is_correct else '·' }}</span>
+                        {{ option.text }}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="muted small clamp-2"><b>Model answer:</b> {{ question.model_answer or 'Not provided yet.' }}</p>
+                {% endif %}
+              </div>
+
+              {% if not locked %}
+                <div class="question-admin-actions">
+                  <a class="btn btn-ghost btn-sm" href="/host/quizzes/{{ quiz.id }}/questions/{{ question.id }}/edit">Edit</a>
+                  <form method="post" action="/host/quizzes/{{ quiz.id }}/questions/{{ question.id }}/move">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                    <input type="hidden" name="direction" value="up">
+                    <button class="icon-btn" type="submit" title="Move up" {{ 'disabled' if loop.first }}>↑</button>
+                  </form>
+                  <form method="post" action="/host/quizzes/{{ quiz.id }}/questions/{{ question.id }}/move">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                    <input type="hidden" name="direction" value="down">
+                    <button class="icon-btn" type="submit" title="Move down" {{ 'disabled' if loop.last }}>↓</button>
+                  </form>
+                  <form method="post" action="/host/quizzes/{{ quiz.id }}/questions/{{ question.id }}/delete" data-confirm="Delete this question?">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                    <button class="icon-btn danger" type="submit" title="Delete">×</button>
+                  </form>
+                </div>
+              {% endif %}
+            </article>
+          {% endfor %}
+        {% else %}
+          <div class="card-pad">
+            {{ empty_state("No questions yet", "Add a multiple-choice or written question to get this quiz ready.") }}
+            {% if not locked %}
+              <div class="row gap-2 center wrap">
+                <a class="btn btn-primary" href="/host/quizzes/{{ quiz.id }}/questions/new?type=mcq">Add multiple choice</a>
+                <a class="btn btn-ghost" href="/host/quizzes/{{ quiz.id }}/questions/new?type=written">Add written</a>
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card card-pad">
+      <div class="section-head tight">
+        <h2>Quiz settings</h2>
+        <span class="muted small">Changes apply immediately</span>
+      </div>
+
+      <form method="post" action="/host/quizzes/{{ quiz.id }}" class="stack gap-4">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+        <label class="field">
+          <span class="label">Title</span>
+          <input class="input" type="text" name="title" value="{{ quiz.title }}" maxlength="200" required>
+        </label>
+
+        <label class="field">
+          <span class="label">Short description</span>
+          <textarea class="textarea" name="description" rows="2" maxlength="5000">{{ quiz.description }}</textarea>
+        </label>
+
+        <label class="field">
+          <span class="label">Instructions</span>
+          <textarea class="textarea" name="instructions" rows="3" maxlength="5000">{{ quiz.instructions }}</textarea>
+        </label>
+
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Time limit (minutes)</span>
+            <input class="input" type="number" name="time_limit_minutes" min="1" max="600" value="{{ quiz.time_limit_minutes or '' }}" placeholder="Untimed">
+            <span class="hint">Existing attempts keep their original deadline.</span>
+          </label>
+          <label class="field">
+            <span class="label">Attempts allowed</span>
+            <input class="input" type="number" name="max_attempts" min="1" max="10" value="{{ quiz.max_attempts }}" required>
+          </label>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Pass mark (%)</span>
+            <input class="input" type="number" name="pass_percent" min="0" max="100" value="{{ quiz.pass_percent }}" required>
+          </label>
+          <div class="field">
+            <span class="label">Randomisation</span>
+            <label class="check-row">
+              <input type="checkbox" name="shuffle_questions" {{ 'checked' if quiz.shuffle_questions }}>
+              <span>Shuffle questions per attempt</span>
+            </label>
+            <label class="check-row">
+              <input type="checkbox" name="shuffle_options" {{ 'checked' if quiz.shuffle_options }}>
+              <span>Shuffle answer options</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Opens at (UTC)</span>
+            <input class="input" type="datetime-local" name="opens_at" value="{{ quiz.opens_at.strftime('%Y-%m-%dT%H:%M') if quiz.opens_at else '' }}">
+          </label>
+          <label class="field">
+            <span class="label">Closes at (UTC)</span>
+            <input class="input" type="datetime-local" name="closes_at" value="{{ quiz.closes_at.strftime('%Y-%m-%dT%H:%M') if quiz.closes_at else '' }}">
+          </label>
+        </div>
+
+        <button class="btn btn-primary" type="submit">Save settings</button>
+      </form>
+    </section>
+  </div>
+
+  <aside class="stack gap-4">
+    <section class="card card-pad share-card">
+      <span class="eyebrow">Access code</span>
+      <h2 class="h3">Share this code</h2>
+      <button class="code-display" type="button" data-copy="{{ quiz.access_code }}">
+        <span>{{ quiz.access_code }}</span>
+        <span class="code-copy-hint">Click to copy</span>
+      </button>
+      <p class="muted tiny">Participants redeem it at <span class="mono">/join</span>. It only works once per person, and only for approved accounts.</p>
+      <div class="share-link">
+        <span class="mono" title="{{ request.base_url }}join?code={{ quiz.access_code }}">{{ request.base_url }}join?code={{ quiz.access_code }}</span>
+        <button class="icon-btn" type="button" data-copy="{{ request.base_url }}join?code={{ quiz.access_code }}" title="Copy join link">⧉</button>
+      </div>
+      <form method="post" action="/host/quizzes/{{ quiz.id }}/rotate-code" data-confirm="Rotate the code? The old code will stop working.">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+        <button class="btn btn-ghost btn-block btn-sm" type="submit">Rotate access code</button>
+      </form>
+    </section>
+
+    <section class="card card-pad">
+      <span class="eyebrow">At a glance</span>
+      <div class="mini-stats">
+        <div><b>{{ enrolled }}</b><span>enrolled</span></div>
+        <div><b>{{ submissions }}</b><span>submitted</span></div>
+        <div><b>{{ quiz.questions | length }}</b><span>questions</span></div>
+        <div><b>{{ quiz.total_points }}</b><span>points</span></div>
+      </div>
+      <a class="btn btn-ghost btn-block btn-sm" href="/host/quizzes/{{ quiz.id }}/submissions">Open submissions</a>
+      <a class="btn btn-ghost btn-block btn-sm" href="/host/quizzes/{{ quiz.id }}/results">Open results</a>
+    </section>
+
+    <section class="card card-pad">
+      <span class="eyebrow">Results</span>
+      <h2 class="h3">{{ 'Released' if quiz.results_released else 'Sealed' }}</h2>
+      <p class="muted small">
+        {{ 'Participants can see scores and feedback.' if quiz.results_released else 'Participants see a waiting state until you release results from the results page.' }}
+      </p>
+      <a class="btn btn-ghost btn-block btn-sm" href="/host/quizzes/{{ quiz.id }}/results">Manage results</a>
+    </section>
+
+    <section class="card card-pad danger-zone">
+      <span class="eyebrow">Danger zone</span>
+      <h2 class="h3">Delete quiz</h2>
+      <p class="muted small">Only possible before anyone starts an attempt. Otherwise close it instead.</p>
+      <form method="post" action="/host/quizzes/{{ quiz.id }}/delete" data-confirm="Delete this quiz permanently?">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+        <button class="btn btn-danger btn-block btn-sm" type="submit" {{ 'disabled' if locked }}>Delete quiz</button>
+      </form>
+    </section>
+  </aside>
+</div>
+{% endblock %}

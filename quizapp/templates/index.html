@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block bodyclass %}landing{% endblock %}
+{% block title %}{{ app_name }} — quizzes that feel alive{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <div class="eyebrow"><span class="dot"></span> Quiz hosting, without the busywork</div>
+    <h1>Quizzes that <span class="gradient-text">keep up</span> with your people.</h1>
+    <p class="hero-lede">
+      Build multiple-choice and written quizzes, share a code, run fair timed attempts,
+      then grade with the answer and the model answer side by side. Results stay sealed
+      until you release them.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary btn-lg" href="/register?role=host">Host a quiz</a>
+      <a class="btn btn-ghost btn-lg" href="/join">I have a code</a>
+    </div>
+    <div class="hero-note">
+      <span class="status-dot"></span>
+      Admin-approved hosts · host-approved participants · access-code-only quiz entry
+    </div>
+  </div>
+
+  <div class="hero-visual" aria-hidden="true">
+    <div class="mock-card">
+      <div class="mock-top">
+        <span class="mock-tag">World History · Q3</span>
+        <span class="mock-points">4 pts</span>
+      </div>
+      <p class="mock-question">Explain one long-term effect of the Silk Road on Eurasian societies.</p>
+      <div class="mock-answer">
+        <span class="mock-line w-100"></span>
+        <span class="mock-line w-92"></span>
+        <span class="mock-line w-70"></span>
+        <span class="mock-caret"></span>
+      </div>
+      <div class="mock-foot">
+        <span class="mock-save">Saved just now</span>
+        <span class="mock-timer">14:02</span>
+      </div>
+    </div>
+
+    <div class="float-card float-grade">
+      <span class="float-label">Grading</span>
+      <div class="float-row"><span>MCQ auto</span><b class="text-green">4 / 4</b></div>
+      <div class="float-row"><span>Written</span><b>3 / 4</b></div>
+      <div class="float-meter"><span style="width: 78%"></span></div>
+    </div>
+
+    <div class="float-card float-score">
+      <span class="score-ring small" style="--score: 78"><b>78%</b></span>
+      <div>
+        <span class="float-label">Maya Patel</span>
+        <span class="muted tiny">Results released</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="stats-strip">
+  <div class="stat-cell"><b>{{ stats.quizzes }}</b><span>published quizzes</span></div>
+  <div class="stat-cell"><b>{{ stats.hosts }}</b><span>approved accounts</span></div>
+  <div class="stat-cell"><b>2</b><span>question formats</span></div>
+  <div class="stat-cell"><b>100%</b><span>server-enforced timing</span></div>
+</section>
+
+<section class="section" id="features">
+  <div class="section-head">
+    <span class="eyebrow">Built for the whole loop</span>
+    <h2>From draft to final score, in one place.</h2>
+    <p class="muted">No spreadsheets, no answer keys in the page source, no mystery about who still needs grading.</p>
+  </div>
+
+  <div class="feature-grid">
+    <article class="feature-card">
+      <div class="feature-icon tone-cyan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="17" r="3"/></svg>
+      </div>
+      <h3>Two formats, one flow</h3>
+      <p>Mix auto-scored multiple choice with written answers that need a human eye. Points and ordering are yours to set.</p>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon tone-magenta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>
+      </div>
+      <h3>Timers that actually hold</h3>
+      <p>The deadline lives on the server. Refreshes, closed tabs and clock changes don't buy extra time — answers auto-submit.</p>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon tone-lime">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 14l4 4 12-12"/><path d="M4 6h6"/></svg>
+      </div>
+      <h3>Grading with context</h3>
+      <p>See the prompt, the model answer, the participant's response and the points available — then leave specific feedback.</p>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon tone-violet">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 10h8M8 14h5"/></svg>
+      </div>
+      <h3>Private by default</h3>
+      <p>No public quiz directory. Every quiz needs its access code, and every new account needs an approval before it can sign in.</p>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon tone-amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-4 3 2 4-6"/></svg>
+      </div>
+      <h3>Results with a release switch</h3>
+      <p>Participants see a waiting state until you're done. Release scores and feedback once, and the leaderboard appears.</p>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon tone-cyan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+      </div>
+      <h3>Numbers you can take away</h3>
+      <p>Question-level accuracy, score distribution, pass rate and a clean CSV export for your records.</p>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="how">
+  <div class="section-head">
+    <span class="eyebrow">Three moves</span>
+    <h2>How a quiz travels through {{ app_name }}.</h2>
+  </div>
+
+  <div class="step-grid">
+    <article class="step-card">
+      <span class="step-number">01</span>
+      <h3>Build & publish</h3>
+      <p>Draft your questions, set points, time limits and attempts, then publish. The quiz gets a shareable access code.</p>
+      <div class="step-tag">Host</div>
+    </article>
+    <article class="step-card">
+      <span class="step-number">02</span>
+      <h3>Join & answer</h3>
+      <p>Participants redeem the code, start the timer and answer with autosave. Multiple choice is scored the moment they submit.</p>
+      <div class="step-tag">Participant</div>
+    </article>
+    <article class="step-card">
+      <span class="step-number">03</span>
+      <h3>Grade & release</h3>
+      <p>Written answers land in your grading queue. Score them, finalize the attempt, then release results and export the CSV.</p>
+      <div class="step-tag">Host</div>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="roles">
+  <div class="section-head">
+    <span class="eyebrow">Clear boundaries</span>
+    <h2>Three roles. No accidental access.</h2>
+  </div>
+
+  <div class="role-grid">
+    <article class="role-card">
+      <div class="role-head"><span class="role-mark tone-violet">H</span><h3>Hosts</h3></div>
+      <ul class="check-list">
+        <li>Request a host account, approved by the platform admin</li>
+        <li>Create, publish, close and reopen quizzes</li>
+        <li>Approve participants and rotate access codes</li>
+        <li>Grade written answers and release results</li>
+      </ul>
+    </article>
+    <article class="role-card">
+      <div class="role-head"><span class="role-mark tone-cyan">P</span><h3>Participants</h3></div>
+      <ul class="check-list">
+        <li>Register and wait for a host to approve the account</li>
+        <li>Join only with an access code from their host</li>
+        <li>Take timed attempts with automatic saving</li>
+        <li>See scores and feedback after the host releases them</li>
+      </ul>
+    </article>
+    <article class="role-card">
+      <div class="role-head"><span class="role-mark tone-magenta">A</span><h3>Admin</h3></div>
+      <ul class="check-list">
+        <li>Approve or reject host applications</li>
+        <li>Reset passwords and disable accounts</li>
+        <li>Keep an audit trail of approvals and releases</li>
+        <li>Step in when a participant needs a fallback approval</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section class="cta-band">
+  <div>
+    <span class="eyebrow">Ready when you are</span>
+    <h2>Your next quiz is one draft away.</h2>
+    <p class="muted">Create a host account and get the first code in front of your participants today.</p>
+  </div>
+  <div class="cta-actions">
+    <a class="btn btn-primary btn-lg" href="/register?role=host">Create a host account</a>
+    <a class="btn btn-ghost btn-lg" href="/login">Sign in</a>
+  </div>
+</section>
+{% endblock %}
